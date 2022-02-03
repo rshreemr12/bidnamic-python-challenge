@@ -7,17 +7,7 @@ from bidApp.models import Campaigns, AdGroups, SearchTerm
 from pytz import UTC
 
 
-DATETIME_FORMAT = '%m/%d/%Y'
-
-# VACCINES_NAMES = [
-#     'Canine Parvo',
-#     'Canine Distemper',
-#     'Canine Rabies',
-#     'Canine Leptospira',
-#     'Feline Herpes Virus 1',
-#     'Feline Rabies',
-#     'Feline Leukemia'
-# ]
+DATETIME_FORMAT = '%Y-%m-%d' #'%m/%d/%Y'
 
 ALREDY_LOADED_ERROR_MESSAGE = """
 If you need to reload the  data from the CSV file,
@@ -32,61 +22,72 @@ class Command(BaseCommand):
     help = "Loads data from CSV files"
 
     def handle(self, *args, **options):
-        if Campaigns.objects.exists() or AdGroups.objects.exists() or SearchTerm.objects.exists():
-            print('Data already loaded...exiting!')
+        
+        if Campaigns.objects.exists(): 
+            print('Data Campaigns already loaded...exiting!')
+            print(ALREDY_LOADED_ERROR_MESSAGE)
+            
+        else :
+            print("Loading campaigns Data !")
+            for row in DictReader(open(r'E:\bidnamic_\data\campaigns.csv')):
+                ci = Campaigns()
+                ci.campaign_id = row['campaign_id']
+                ci.structure_value = row['structure_value']
+                ci.status = row['status']
+                ci.save()
+        
+        if  AdGroups.objects.exists():
+            print('Data AdGroups already loaded...exiting!')
+            print(ALREDY_LOADED_ERROR_MESSAGE)
+            # return
+        else:
+            print("Loading adgroups Data !")
+
+            for row in DictReader(open(r'E:\bidnamic_\data\adgroups.csv')):
+                ag = AdGroups()
+                ag.alias = row['alias']
+                ag.ad_group_id = row['ad_group_id']
+                ag.status = row['status']
+
+                print(f"\n\n campaign_id: {row['campaign_id']}  \n\n\n")
+                print(f"\n\n  {Campaigns.objects.filter(campaign_id = row['campaign_id']).first().campaign_id } \n\n\n")
+
+                ci = Campaigns.objects.filter(campaign_id = row['campaign_id']).first()
+                ag.campaign = ci
+
+                ag.save()
+
+        if  SearchTerm.objects.exists():
+            print('Data SearchTerm already loaded...exiting!')
             print(ALREDY_LOADED_ERROR_MESSAGE)
             return
-        # print("Creating Campaigns data")
-        # for vaccine_name in VACCINES_NAMES:
-        #     vac = Vaccine(name=vaccine_name)
-        #     vac.save()
-        print("Loading SearchTerm Data !")
-
-        for row in DictReader(open(r'E:\bidnamic_\data\campaigns.csv')):
-            ci = Campaigns()
-            ci.campaign_id = row['campaign_id']
-            ci.structure_value = row['structure_value']
-            ci.status = row['status']
-            ci.save()
-
-        for row in DictReader(open(r'E:\bidnamic_\data\adgroups.csv')):
-            ag = AdGroups()
-            ag.alias = row['alias']
-            ag.ad_group_id = row['ad_group_id']
-            ag.status = row['status']
-            # ci.campaign_id = row['campaign_id']
-
-            ci = Campaigns.objects.get(row['campaign_id'])
-            ag.campaign_id.add(ci)
-            ag.save()
+        else:
+            print("Loading search_terms Data !")
+            
+            for row in DictReader(open(r'E:\bidnamic_\data\search_terms_1.csv')):
+                obj = SearchTerm()
+                # obj.ad_group_id = row['ad_group_id']
+                # obj.Campaign_id = row['Campaign_id']
+                obj.id = row['id']
+                obj.clicks = row['clicks']
+                obj.cost = row['cost']
+                obj.conversion_value = row['conversion_value']
+                obj.conversions = row['conversions']
+                obj.search_term = row['search_term']
+                obj.roas = row['roas']
+                raw_submission_date = row['date']
+                date = UTC.localize(
+                    datetime.strptime(raw_submission_date, DATETIME_FORMAT))
+                obj.date = date
 
 
-        for row in DictReader(open(r'E:\bidnamic_\data\search_terms.csv')):
-            obj = SearchTerm()
-            # obj.ad_group_id = row['ad_group_id']
-            # obj.Campaign_id = row['Campaign_id']
-            obj.clicks = row['clicks']
-            obj.cost = row['cost']
-            obj.conversion_value = row['conversion_value']
-            obj.conversions = row['conversions']
-            obj.search_term = row['search_term']
-            raw_submission_date = row['date']
-            date = UTC.localize(
-                datetime.strptime(raw_submission_date, DATETIME_FORMAT))
-            obj.submission_date = date
+                ci = Campaigns.objects.filter(campaign_id = row['campaign_id']).first()
+                obj.campaign = ci
+                
+                ag = AdGroups.objects.filter(ad_group_id = row['ad_group_id']).first()
+                obj.ad_group = ag
+                
+                print(f"\n\n campaign_id: {row['campaign_id']}  \n\n\n")
 
-
-            ci = Campaigns.objects.get(row['campaign_id'])
-            obj.campaign_id.add(ci)
-
-            ag = Campaigns.objects.get(row['ad_group_id'])
-            obj.campaign_id.add(ag)
-
-            obj.save()
-            # raw_vaccination_names = row['vaccinations']
-            # vaccination_names = [name for name in raw_vaccination_names.split('| ') if name]
-            # for vac_name in vaccination_names:
-            #     vac = Vaccine.objects.get(name=vac_name)
-            #     pet.vaccination.add(vac)
-            # pet.save()
-
+                obj.save()
+    
